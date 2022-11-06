@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 )
 
@@ -22,18 +23,22 @@ func main() {
 	for _, v := range files {
 		if !v.IsDir() {
 			fmt.Println(v.Name())
-			r, regexErr := regexp.Compile("(.*)(?=\\.(epub|pdf)$)")
-			if regexErr != nil {
-				log.Panic(regexErr)
-			}
+			r := regexp.MustCompile(`(?i).*\.(epub|pdf)$`)
+			directoryEntry := r.FindAllString(v.Name(), -1)
+			if len(directoryEntry) > 0 && len(directoryEntry[0]) > 0 {
+				log.Printf("found: %s", directoryEntry[0])
 
-			log.Printf("found: %s", r.FindAllString(v.Name(), -1))
+				var newDirectoryName string = v.Name()[:len(v.Name())-len(filepath.Ext(v.Name()))]
+				log.Printf("Neues Verzeichnis: %v", newDirectoryName)
 
-			if err := os.Mkdir(r.FindString(v.Name()), os.ModePerm); err != nil {
-				log.Fatal(err)
-			} else {
-				log.Printf("original:%s/%s, new:%s/%s/%s", f.Name(), v.Name(), f.Name(), v.Name(), v.Name())
-				//os.Rename(f.Name()+v.Name(), "./"+v.Name()+"/"+v.Name())
+				if err := os.Mkdir(newDirectoryName, os.ModePerm); err != nil {
+					log.Fatal(fmt.Sprintf("Verzeichnis kann nicht angelegt werden: %v", err.Error()))
+				} else {
+					originalPath := filepath.Join(f.Name(), v.Name())
+					newPath := filepath.Join(f.Name(), newDirectoryName, v.Name())
+					log.Printf("original:%s, new:%s", originalPath, newPath)
+					os.Rename(originalPath, newPath)
+				}
 			}
 		}
 	}
